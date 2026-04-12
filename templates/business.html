@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ biz.name }} — Review Radar</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f7fafc;color:#2d3748}
+  header{background:#1a202c;color:white;padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+  .container{max-width:1040px;margin:24px auto;padding:0 16px;display:grid;grid-template-columns:1fr 300px;gap:16px}
+  .card{background:white;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;margin-bottom:12px}
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .stat{background:white;border-radius:8px;padding:16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+  .stat-val{font-size:1.5rem;font-weight:700}
+  .stat-label{font-size:.75rem;color:#718096;margin-top:2px}
+  .review-card{background:white;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.07);padding:16px;margin-bottom:10px;border-left:4px solid #e2e8f0}
+  .review-card.positive{border-left-color:#38a169}
+  .review-card.negative{border-left-color:#e53e3e}
+  .review-card.neutral{border-left-color:#718096}
+  .stars{color:#d69e2e;font-size:.95rem}
+  .review-text{color:#4a5568;margin:8px 0;font-size:.9rem;line-height:1.5}
+  .ai-response{background:#f0fff4;border:1px solid #c6f6d5;border-radius:6px;padding:10px;font-size:.85rem;color:#276749;margin-top:8px}
+  .btn{display:inline-block;padding:5px 10px;border-radius:5px;font-size:.78rem;font-weight:600;border:none;cursor:pointer;text-decoration:none}
+  .btn-blue{background:#3182ce;color:white}
+  .btn-green{background:#38a169;color:white}
+  .btn-gray{background:#e2e8f0;color:#4a5568}
+  .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:600}
+  .badge-positive{background:#c6f6d5;color:#276749}
+  .badge-negative{background:#fed7d7;color:#9b2335}
+  .badge-neutral{background:#e2e8f0;color:#4a5568}
+  .badge-google{background:#4285f4;color:white}
+  .badge-yelp{background:#d32323;color:white}
+  .badge-demo{background:#805ad5;color:white}
+  .filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  h2{font-size:1rem;margin-bottom:12px;color:#4a5568}
+  a{color:#2b6cb0;text-decoration:none}
+  @media(max-width:700px){.container{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <h1 style="font-size:1.2rem">📡 {{ biz.name }}</h1>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-blue" onclick="triggerScan({{ biz.id }})">🔄 Scan Now</button>
+    <a href="/" class="btn btn-gray">← All Businesses</a>
+  </div>
+</header>
+
+<div style="max-width:1040px;margin:16px auto;padding:0 16px">
+  <div class="stats-row">
+    <div class="stat"><div class="stat-val">{{ stats.total or 0 }}</div><div class="stat-label">Total Reviews</div></div>
+    <div class="stat"><div class="stat-val" style="color:#d69e2e">{{ "%.1f"|format(stats.avg_rating or 0) }}⭐</div><div class="stat-label">Avg Rating</div></div>
+    <div class="stat"><div class="stat-val" style="color:#e53e3e">{{ stats.negative or 0 }}</div><div class="stat-label">Negative</div></div>
+    <div class="stat"><div class="stat-val" style="color:#38a169">{{ stats.responded_count or 0 }}</div><div class="stat-label">Responded</div></div>
+  </div>
+</div>
+
+<div class="container">
+  <div>
+    <!-- Filters -->
+    <div class="filter-row">
+      <a href="/business/{{ biz.id }}" class="btn {% if not sentiment_filter %}btn-blue{% else %}btn-gray{% endif %}">All</a>
+      <a href="/business/{{ biz.id }}?sentiment=positive" class="btn {% if sentiment_filter=='positive' %}btn-green{% else %}btn-gray{% endif %}">🟢 Positive</a>
+      <a href="/business/{{ biz.id }}?sentiment=negative" class="btn {% if sentiment_filter=='negative' %}btn-blue{% else %}btn-gray{% endif %}" style="{% if sentiment_filter=='negative' %}background:#e53e3e{% endif %}">🔴 Negative</a>
+      <a href="/business/{{ biz.id }}?sentiment=neutral" class="btn btn-gray">⚪ Neutral</a>
+    </div>
+
+    {% if reviews %}
+      {% for r in reviews %}
+      <div class="review-card {{ r.sentiment }}">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div>
+            <strong>{{ r.author_name or "Anonymous" }}</strong>
+            <span class="badge badge-{{ r.platform }}" style="margin-left:6px">{{ r.platform }}</span>
+            <span class="badge badge-{{ r.sentiment }}" style="margin-left:4px">{{ r.sentiment }}</span>
+            {% if r.responded %}<span class="badge" style="background:#c6f6d5;color:#276749;margin-left:4px">✓ Responded</span>{% endif %}
+          </div>
+          <div class="stars">{{ "⭐" * (r.rating or 0) }}<span style="color:#718096;font-size:.8rem"> {{ r.rating }}/5</span></div>
+        </div>
+        <div class="review-text">{{ r.text }}</div>
+        {% if r.ai_response %}
+        <div class="ai-response">
+          <strong style="font-size:.8rem">💬 AI Response Draft:</strong><br>
+          <span id="resp-{{ r.id }}">{{ r.ai_response }}</span>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px">
+          {% if not r.responded %}
+          <button class="btn btn-green" onclick="markResponded({{ r.id }})">✓ Mark Responded</button>
+          {% endif %}
+          <button class="btn btn-gray" onclick="regenerate({{ r.id }})">↻ Regenerate</button>
+          <button class="btn btn-blue" onclick="copyResponse('resp-{{ r.id }}')">📋 Copy</button>
+        </div>
+        {% endif %}
+        {% if r.published_at %}
+        <div style="font-size:.72rem;color:#a0aec0;margin-top:8px">{{ r.published_at[:10] }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="background:white;border-radius:8px;padding:32px;text-align:center;color:#a0aec0;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+        No reviews yet. Click "Scan Now" to fetch reviews.
+      </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Business Info</h2>
+      <div style="font-size:.85rem;color:#718096;line-height:2">
+        {% if biz.google_place_id %}
+        <div>🌐 Google: <code>{{ biz.google_place_id[:20] }}...</code></div>
+        {% else %}
+        <div style="color:#a0aec0">🌐 Google: not connected</div>
+        {% endif %}
+        {% if biz.yelp_business_id %}
+        <div>⭐ Yelp: <code>{{ biz.yelp_business_id }}</code></div>
+        {% else %}
+        <div style="color:#a0aec0">⭐ Yelp: not connected</div>
+        {% endif %}
+        {% if biz.owner_email %}
+        <div>📧 {{ biz.owner_email }}</div>
+        {% endif %}
+        <div>🎨 Tone: {{ biz.response_tone }}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Sentiment Breakdown</h2>
+      {% set total = stats.total or 1 %}
+      <div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:4px">
+          <span>🟢 Positive</span><span>{{ stats.positive or 0 }}</span>
+        </div>
+        <div style="background:#e2e8f0;border-radius:4px;height:8px">
+          <div style="background:#38a169;height:8px;border-radius:4px;width:{{ ((stats.positive or 0) / total * 100)|int }}%"></div>
+        </div>
+      </div>
+      <div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:4px">
+          <span>🔴 Negative</span><span>{{ stats.negative or 0 }}</span>
+        </div>
+        <div style="background:#e2e8f0;border-radius:4px;height:8px">
+          <div style="background:#e53e3e;height:8px;border-radius:4px;width:{{ ((stats.negative or 0) / total * 100)|int }}%"></div>
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:4px">
+          <span>⚪ Neutral</span><span>{{ stats.neutral or 0 }}</span>
+        </div>
+        <div style="background:#e2e8f0;border-radius:4px;height:8px">
+          <div style="background:#718096;height:8px;border-radius:4px;width:{{ ((stats.neutral or 0) / total * 100)|int }}%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function triggerScan(id) {
+  const btn = event.target;
+  btn.textContent = 'Scanning...';
+  btn.disabled = true;
+  const res = await fetch(`/business/${id}/scan`, {method:'POST'});
+  const d = await res.json();
+  alert(d.msg);
+  location.reload();
+}
+async function markResponded(id) {
+  await fetch(`/review/${id}/mark-responded`, {method:'POST'});
+  location.reload();
+}
+async function regenerate(id) {
+  const btn = event.target;
+  btn.textContent = '...';
+  const res = await fetch(`/review/${id}/regenerate`, {method:'POST'});
+  const d = await res.json();
+  document.getElementById(`resp-${id}`).textContent = d.response;
+  btn.textContent = '↻ Regenerate';
+}
+function copyResponse(elId) {
+  const text = document.getElementById(elId).textContent;
+  navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+}
+</script>
+</body>
+</html>

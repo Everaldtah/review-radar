@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Review Radar</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f7fafc;color:#2d3748}
+  header{background:#1a202c;color:white;padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+  header h1{font-size:1.4rem}
+  .container{max-width:960px;margin:32px auto;padding:0 16px}
+  .biz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px}
+  .biz-card{background:white;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:24px;transition:box-shadow .2s}
+  .biz-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.15)}
+  .biz-name{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+  .rating{font-size:1.4rem;font-weight:700;color:#d69e2e}
+  .sentiment-row{display:flex;gap:8px;margin:12px 0}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+  .pos{background:#38a169}.neg{background:#e53e3e}.neu{background:#718096}
+  .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:600}
+  .btn{display:inline-block;padding:7px 14px;border-radius:6px;text-decoration:none;font-weight:600;font-size:.85rem;border:none;cursor:pointer}
+  .btn-primary{background:#2b6cb0;color:white}
+  .btn-green{background:#38a169;color:white}
+  .card{background:white;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:24px;margin-bottom:16px}
+  .empty{color:#a0aec0;text-align:center;padding:32px}
+</style>
+</head>
+<body>
+<header>
+  <h1>📡 Review Radar</h1>
+  <a href="/business/new" class="btn btn-green">+ Add Business</a>
+</header>
+<div class="container">
+  {% if businesses %}
+    <div class="biz-grid">
+      {% for biz, stat in businesses | zip(stats) %}
+      <div class="biz-card">
+        <div class="biz-name">{{ biz.name }}</div>
+        {% if stat.avg_rating %}
+          <div class="rating">{{ "%.1f"|format(stat.avg_rating) }} ⭐</div>
+        {% endif %}
+        <div class="sentiment-row">
+          <span><span class="dot pos"></span> {{ stat.positive or 0 }} positive</span>
+          <span><span class="dot neg"></span> {{ stat.negative or 0 }} negative</span>
+        </div>
+        <div style="color:#a0aec0;font-size:.8rem;margin-bottom:12px">{{ stat.total or 0 }} total reviews</div>
+        <a href="/business/{{ biz.id }}" class="btn btn-primary">View Dashboard</a>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card">
+      <div class="empty">
+        No businesses tracked yet.<br>
+        <a href="/business/new" style="color:#2b6cb0;font-weight:600">Add your first business →</a>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="card" style="background:#ebf8ff;border:1px solid #bee3f8">
+    <h3 style="color:#2b6cb0;margin-bottom:12px">How Review Radar Works</h3>
+    <ol style="padding-left:20px;line-height:2;color:#4a5568;font-size:.9rem">
+      <li>Add your business and connect Google/Yelp IDs</li>
+      <li>Review Radar polls for new reviews every hour</li>
+      <li>New reviews are analyzed for sentiment automatically</li>
+      <li>AI-drafted responses are generated for each review</li>
+      <li>Get instant alerts for negative reviews via Slack/webhook</li>
+    </ol>
+  </div>
+</div>
+</body>
+</html>
